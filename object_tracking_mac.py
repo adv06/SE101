@@ -32,7 +32,7 @@ while True:
     frame = cv2.resize(frame, (640, 480))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Detect faces
+    # Detect faces using the Haar Cascade fallback method
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
     center_points2 = []
@@ -70,9 +70,14 @@ while True:
         kalman = kalman_filters[object_id]
         prediction = kalman.predict()
         predicted_x, predicted_y = prediction[0], prediction[1]
-        
+
+        # Track and draw the predicted face
         cv2.circle(frame, (int(predicted_x), int(predicted_y)), 5, (255, 255, 0), -1)
         cv2.putText(frame, str(object_id), (int(predicted_x), int(predicted_y) - 7), 0, 1, (0, 0, 255), 2)
+
+    # Display the total number of tracked faces
+    total_faces = len(tracking_objects)
+    cv2.putText(frame, f"Total Faces: {total_faces}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     cv2.imshow("Frame", frame)
 

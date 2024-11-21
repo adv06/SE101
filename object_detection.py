@@ -32,3 +32,20 @@ class FaceDetection:
                 faces.append((x, y, w, h))  # Collect face bounding box coordinates
 
         return faces
+
+def count_faces(frame):
+    # Initialize the face detection model
+    detector = FaceDetection()
+
+    # Detect faces
+    faces = detector.detect(frame)
+    
+    # Draw bounding boxes around faces and show face count
+    for (x, y, w, h) in faces:
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 200), 2)
+
+    # Display the face count on the frame
+    face_count = len(faces)
+    cv2.putText(frame, f"Face Count: {face_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+    return face_count
