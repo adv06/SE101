@@ -2,11 +2,18 @@ import cv2
 import numpy as np
 from math import sqrt
 
-# Initialize Haar Cascade (fallback for face detection on macOS)
+# Initialize Haar Cascade for face detection (fallback)
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-cap = cv2.VideoCapture(0)
+# Kalman Filter Setup for better tracking
+def create_kalman_filter():
+    kalman = cv2.KalmanFilter(4, 2)  # 4 state variables, 2 measurements (x, y)
+    kalman.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+    kalman.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
+    kalman.processNoiseCov = 0.03 * np.eye(4, dtype=np.float32)
+    return kalman
 
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Error: Camera not accessible. Check macOS camera permissions.")
     exit()
@@ -14,6 +21,7 @@ if not cap.isOpened():
 count = 0
 tracking_objects = {}
 track_id = 0
+kalman_filters = {}  # Store Kalman Filters per object
 
 while True:
     ret, frame = cap.read()
@@ -21,25 +29,23 @@ while True:
         print("Error: Unable to read from camera.")
         break
 
-    # Resize frame for consistency
     frame = cv2.resize(frame, (640, 480))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Detect faces (fallback logic)
+    # Detect faces
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
     center_points2 = []
-
     for (x, y, w, h) in faces:
         cx = (x + x + w) // 2
         cy = (y + y + h) // 2
         center_points2.append((cx, cy))
-        # Draw rectangle
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 200), 2)
 
     if count == 0:
         for pt in center_points2:
             tracking_objects[track_id] = pt
+            kalman_filters[track_id] = create_kalman_filter()  # Create Kalman filter for new object
             track_id += 1
     else:
         for object_id, pt in tracking_objects.copy().items():
@@ -53,14 +59,20 @@ while True:
                     break
             if not object_exists:
                 tracking_objects.pop(object_id)
+
         for pt in center_points2:
             tracking_objects[track_id] = pt
+            kalman_filters[track_id] = create_kalman_filter()  # Create Kalman filter for new object
             track_id += 1
 
     count += 1
     for object_id, pt in tracking_objects.items():
-        cv2.circle(frame, pt, 5, (255, 255, 0), -1)
-        cv2.putText(frame, str(object_id), (pt[0], pt[1] - 7), 0, 1, (0, 0, 255), 2)
+        kalman = kalman_filters[object_id]
+        prediction = kalman.predict()
+        predicted_x, predicted_y = prediction[0], prediction[1]
+        
+        cv2.circle(frame, (int(predicted_x), int(predicted_y)), 5, (255, 255, 0), -1)
+        cv2.putText(frame, str(object_id), (int(predicted_x), int(predicted_y) - 7), 0, 1, (0, 0, 255), 2)
 
     cv2.imshow("Frame", frame)
 
@@ -70,5 +82,3 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-
-#d
