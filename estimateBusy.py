@@ -44,7 +44,7 @@ model = keras.Sequential([
     keras.layers.Dense(5, activation = "relu")
 ])
 
-model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+model.compile(optimizer="adam", loss="mean_squared_error", metrics=["mae"])
 
 
 # epochs - same image in different order
@@ -57,7 +57,7 @@ model2 = keras.Sequential([
     keras.layers.Dense(5, activation = "relu"),
 ])
 
-model2.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+model2.compile(optimizer="adam", loss="mean_squared_error", metrics=["mae"])
 
 
 # epochs - same image in different order
@@ -67,7 +67,7 @@ model3 = tf.concat([model.output, model2.output])
 
 
 fnal = keras.layers.Dense(2, activation="relu")(model3)
-fnal = keras.layers.Dense(2, activation="linear")(fnal)
+fnal = keras.layers.Dense(1, activation="linear")(fnal)
 
 
 loss, acc = fnal.evaluate([x1_train, x2_train], y_train)
